@@ -1,0 +1,14 @@
+<?php
+require_once __DIR__ . '/inc/header.php'; require_login(); require_role(array('admin','organizer','viewer'));
+$canEdit=in_array($_SESSION['role'],array('admin','organizer'),true);
+if($canEdit && $_SERVER['REQUEST_METHOD']==='POST'){
+$id=(int)($_POST['entry_id']??0);$event=(int)($_POST['event_id']??0);$dog=(int)($_POST['dog_id']??0);$class=trim($_POST['class_code']??'');$group=$_POST['group_code']??'FIELD';$dist=(int)($_POST['distance_m']??0);$status=$_POST['status']??'OK';$dq=trim($_POST['dq_reason']??'');
+if($id>0){$st=$mysqli->prepare('UPDATE entries SET event_id=?,dog_id=?,class_code=?,group_code=?,distance_m=?,status=?,dq_reason=? WHERE entry_id=?');$st->bind_param('iississi',$event,$dog,$class,$group,$dist,$status,$dq,$id);} else {$st=$mysqli->prepare('INSERT INTO entries (event_id,dog_id,class_code,group_code,distance_m,status,dq_reason) VALUES (?,?,?,?,?,?,?)');$st->bind_param('iississ',$event,$dog,$class,$group,$dist,$status,$dq);} $st->execute();$st->close();
+}
+$events=array();$s1=$mysqli->prepare('SELECT event_id,title_main FROM events ORDER BY event_date DESC LIMIT 200');$s1->execute();$s1->bind_result($eid,$et);while($s1->fetch()){$events[$eid]=$et;}$s1->close();
+$dogs=array();$s2=$mysqli->prepare('SELECT dog_id,name FROM dogs ORDER BY name LIMIT 1000');$s2->execute();$s2->bind_result($did,$dn);while($s2->fetch()){$dogs[$did]=$dn;}$s2->close();
+$st=$mysqli->prepare('SELECT entry_id,event_id,dog_id,class_code,group_code,distance_m,status FROM entries ORDER BY entry_id DESC LIMIT 200');$st->execute();$st->bind_result($id,$event,$dog,$class,$group,$dist,$status);
+?>
+<div class="card"><form method="post" class="row"><input type="hidden" name="entry_id" value="0"><div class="col"><label>Event<select name="event_id"><?php foreach($events as $k=>$v):?><option value="<?php echo (int)$k;?>"><?php echo e($v);?></option><?php endforeach;?></select></label></div><div class="col"><label>Dog<select name="dog_id"><?php foreach($dogs as $k=>$v):?><option value="<?php echo (int)$k;?>"><?php echo e($v);?></option><?php endforeach;?></select></label></div><div class="col"><label>Class<input name="class_code" required></label></div><div class="col"><label>Group<select name="group_code"><option>FIELD</option><option>SOLO</option></select></label></div><div class="col"><label>Distance<input name="distance_m" value="350"></label></div><div class="col"><button>Save</button></div></form></div>
+<table><tr><th>ID</th><th>Event</th><th>Dog</th><th>Class</th><th>Group</th><th>Dist</th><th>Status</th></tr><?php while($st->fetch()):?><tr><td><?php echo(int)$id;?></td><td><?php echo e(isset($events[$event])?$events[$event]:'');?></td><td><?php echo e(isset($dogs[$dog])?$dogs[$dog]:'');?></td><td><?php echo e($class);?></td><td><?php echo e($group);?></td><td><?php echo(int)$dist;?></td><td><?php echo e($status);?></td></tr><?php endwhile;?></table>
+<?php $st->close(); require_once __DIR__ . '/inc/footer.php'; ?>
