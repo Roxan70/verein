@@ -1,0 +1,11 @@
+body{font-family:Arial,sans-serif;font-size:20px;background:#f5f7fa;color:#1d2630;margin:0}
+header{background:#113355;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+main{padding:16px}
+input,select,button{font-size:1rem;padding:10px;margin:6px}
+button,.btn{background:#1f5d99;color:#fff;border:0;border-radius:8px;padding:10px 14px;text-decoration:none;display:inline-block}
+table{width:100%;border-collapse:collapse;background:#fff}
+th,td{border:1px solid #ccd4dd;padding:8px;text-align:left}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.err{background:#ffd9d9;padding:8px}
+.formgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.tiny{width:62px}
