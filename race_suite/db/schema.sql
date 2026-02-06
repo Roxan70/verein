@@ -1,0 +1,170 @@
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL CHECK(role IN ('admin','organizer','clerk','vet','timekeeper','viewer')),
+  full_name TEXT NOT NULL,
+  locale TEXT NOT NULL DEFAULT 'de',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  title_en_small TEXT,
+  race_type TEXT NOT NULL CHECK(race_type IN ('TRACK','COURSING','FUNRUN')),
+  event_lang TEXT NOT NULL DEFAULT 'de' CHECK(event_lang IN ('de','en','hu','cs','sk')),
+  event_date TEXT,
+  venue TEXT,
+  final_size INTEGER NOT NULL DEFAULT 6,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS owners (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  street TEXT NOT NULL,
+  zip TEXT NOT NULL,
+  city TEXT NOT NULL,
+  country TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  consent_event_processing INTEGER NOT NULL DEFAULT 0,
+  consent_reuse_future INTEGER NOT NULL DEFAULT 0,
+  signature_path TEXT,
+  is_blocked INTEGER NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS dogs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  breed TEXT,
+  sex TEXT,
+  dob TEXT,
+  owner_id INTEGER NOT NULL,
+  registration_no TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(owner_id) REFERENCES owners(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL,
+  dog_id INTEGER NOT NULL,
+  category TEXT,
+  distance_m INTEGER,
+  entry_no TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(event_id, dog_id),
+  FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY(dog_id) REFERENCES dogs(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS vet_checks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL,
+  dog_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','OK','NOT_OK','HOLD')),
+  notes TEXT,
+  checked_by INTEGER,
+  checked_at TEXT,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(event_id, dog_id),
+  FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY(dog_id) REFERENCES dogs(id) ON DELETE CASCADE,
+  FOREIGN KEY(checked_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS heats (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL,
+  code TEXT NOT NULL,
+  heat_type TEXT NOT NULL CHECK(heat_type IN ('HEAT1','HEAT2','FINAL_A','FINAL_B','FINAL_C','COURSING_RUN1','COURSING_RUN2')),
+  is_auto_final INTEGER NOT NULL DEFAULT 0,
+  ordering INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS heat_assignments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  heat_id INTEGER NOT NULL,
+  entry_id INTEGER NOT NULL,
+  lane INTEGER,
+  start_no INTEGER,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(heat_id, entry_id),
+  FOREIGN KEY(heat_id) REFERENCES heats(id) ON DELETE CASCADE,
+  FOREIGN KEY(entry_id) REFERENCES entries(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS performances (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL,
+  heat_id INTEGER NOT NULL,
+  entry_id INTEGER NOT NULL,
+  time_seconds REAL,
+  points_s INTEGER,
+  points_a INTEGER,
+  points_e INTEGER,
+  points_f INTEGER,
+  points_h INTEGER,
+  status TEXT NOT NULL DEFAULT 'OK' CHECK(status IN ('OK','DQ','NS','NA','DIS','V')),
+  is_counted INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by INTEGER,
+  UNIQUE(heat_id, entry_id),
+  FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY(heat_id) REFERENCES heats(id) ON DELETE CASCADE,
+  FOREIGN KEY(entry_id) REFERENCES entries(id) ON DELETE CASCADE,
+  FOREIGN KEY(updated_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS finals_assignments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL,
+  final_heat_id INTEGER NOT NULL,
+  entry_id INTEGER NOT NULL,
+  seed_rank INTEGER,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(final_heat_id, entry_id),
+  FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY(final_heat_id) REFERENCES heats(id) ON DELETE CASCADE,
+  FOREIGN KEY(entry_id) REFERENCES entries(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS catalog_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL,
+  version_no INTEGER,
+  footer_label TEXT NOT NULL,
+  include_cover INTEGER NOT NULL DEFAULT 1,
+  include_officials INTEGER NOT NULL DEFAULT 1,
+  include_startlists INTEGER NOT NULL DEFAULT 1,
+  include_results INTEGER NOT NULL DEFAULT 1,
+  include_rules INTEGER NOT NULL DEFAULT 1,
+  include_sponsors INTEGER NOT NULL DEFAULT 1,
+  pdf_path TEXT,
+  created_by INTEGER,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY(created_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  id INTEGER PRIMARY KEY CHECK(id = 1),
+  branding_name TEXT NOT NULL DEFAULT 'EU Windhound Race Suite',
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT OR IGNORE INTO app_settings(id, branding_name) VALUES (1, 'EU Windhound Race Suite');
