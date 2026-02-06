@@ -1,0 +1,58 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: kynbiot-postgres
+    environment:
+      POSTGRES_DB: kynbiot
+      POSTGRES_USER: kynbiot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+
+  redis:
+    image: redis:7
+    container_name: kynbiot-redis
+    ports:
+      - '6379:6379'
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: kynbiot-ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - '11434:11434'
+
+  gateway:
+    build: ./gateway
+    container_name: kynbiot-gateway
+    depends_on: [postgres, redis, coordinator]
+    environment:
+      PORT: 3100
+      JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgresql://kynbiot:${POSTGRES_PASSWORD}@postgres:5432/kynbiot
+      REDIS_URL: redis://redis:6379/0
+      COORDINATOR_URL: http://coordinator:8001
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    ports:
+      - '3100:3100'
+
+  coordinator:
+    build: ./coordinator
+    container_name: kynbiot-coordinator
+    depends_on: [postgres, redis, ollama]
+    environment:
+      DATABASE_URL: postgresql://kynbiot:${POSTGRES_PASSWORD}@postgres:5432/kynbiot
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET}
+      NIM_URL: http://100.67.122.99:8000
+      OLLAMA_URL: http://ollama:11434
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+
+volumes:
+  pgdata:
+  ollama-data:

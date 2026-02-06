@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  nim:
+    image: nvcr.io/nim/meta/llama-3.1-8b-instruct:latest
+    container_name: nim
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    deploy:
+      resources:
+        limits:
+          cpus: '7.0'
+          memory: 16g
+    ports:
+      - '8000:8000'
+
+  watchdog:
+    build: ./watchdog
+    container_name: kynbiot-watchdog
+    depends_on: [nim]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      NIM_CONTAINER: nim
+      WATCHDOG_CPU_LIMIT: '70'
+      WATCHDOG_GPU_LIMIT: '50'
+      WATCHDOG_POLL_SECONDS: '10'
+      WATCHDOG_RESUME_IDLE_SECONDS: '300'
