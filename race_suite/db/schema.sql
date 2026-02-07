@@ -72,15 +72,15 @@ CREATE TABLE IF NOT EXISTS entries (
 CREATE TABLE IF NOT EXISTS vet_checks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   event_id INTEGER NOT NULL,
-  entry_id INTEGER NOT NULL,
-  vet_ok INTEGER NOT NULL DEFAULT 0,
-  vet_note TEXT,
+  dog_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','OK','NOT_OK','HOLD')),
+  notes TEXT,
   checked_by INTEGER,
   checked_at TEXT,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(event_id, entry_id),
+  UNIQUE(event_id, dog_id),
   FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
-  FOREIGN KEY(entry_id) REFERENCES entries(id) ON DELETE CASCADE,
+  FOREIGN KEY(dog_id) REFERENCES dogs(id) ON DELETE CASCADE,
   FOREIGN KEY(checked_by) REFERENCES users(id)
 );
 
@@ -120,7 +120,6 @@ CREATE TABLE IF NOT EXISTS performances (
   points_f INTEGER,
   points_h INTEGER,
   status TEXT NOT NULL DEFAULT 'OK' CHECK(status IN ('OK','DQ','NS','NA','DIS','V')),
-  dq_reason TEXT,
   is_counted INTEGER NOT NULL DEFAULT 1,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_by INTEGER,
